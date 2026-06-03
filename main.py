@@ -17,7 +17,6 @@ SYSTEM_STATE = {
         "real_balance": 0.0,
         "currency": "NGN"
     },
-    # The AI uses this rolling array as its training dataset
     "recent_multipliers": [1.45, 2.10, 1.12, 1.05, 3.40, 1.18, 1.25, 1.01, 1.50, 2.80, 1.10, 1.03]
 }
 
@@ -40,26 +39,20 @@ def train_and_predict_next_state(history: list) -> dict:
             "color": "var(--text-muted)"
         }
     
-    # 1. DATA ENGINEERING: Transform history into X (rounds) and Y (multipliers)
     Y = np.array(history).reshape(-1, 1)
     X = np.array(range(len(history))).reshape(-1, 1)
     
-    # 2. MODEL TRAINING: Initialize and train the Scikit-Learn Regression model live in the cloud
     model = LinearRegression()
     model.fit(X, Y)
     
-    # 3. MATHEMATICAL FORECASTING: Predict the value of the next upcoming round
     next_round_index = np.array([[len(history)]])
     predicted_multiplier = float(model.predict(next_round_index)[0][0])
     
-    # 4. PATTERN CORRELATION (Markov Sequence Evaluation)
     last_4 = history[-4:]
     low_busts = sum(1 for x in last_4 if x <= 1.20)
     high_wins = sum(1 for x in last_4 if x >= 2.00)
     
-    # 5. AUTONOMOUS AI DECISION MATRIX
     if low_busts >= 3:
-        # High-probability recovery wave zone calculated mathematically
         prob = min(85.0 + (low_busts * 2.5), 96.8)
         signal = "CRITICAL ENTRY TRIGGER"
         target = f"{max(1.20, min(1.35, predicted_multiplier)):.2f}x"
@@ -67,7 +60,6 @@ def train_and_predict_next_state(history: list) -> dict:
         color = "var(--sporty-green)"
         
     elif high_wins >= 2 or predicted_multiplier > 4.5:
-        # System profit balancing algorithm predicted to kick in
         prob = max(15.0, 45.0 - (high_wins * 5))
         signal = "STRATEGIC HOLD (HIGH RISK)"
         target = "N/A"
@@ -75,7 +67,6 @@ def train_and_predict_next_state(history: list) -> dict:
         color = "var(--sporty-red)"
         
     else:
-        # Balanced baseline state
         prob = max(50.0, min(70.0, 50.0 + (predicted_multiplier * 5)))
         signal = "MONITORING LIVE STABILITY"
         target = "1.30x"
@@ -96,14 +87,18 @@ def render_master_dashboard():
     balance = SYSTEM_STATE["wallet"]["real_balance"]
     history = SYSTEM_STATE["recent_multipliers"]
     
-    # Calculate real ML predictions live
     ai_eval = train_and_predict_next_state(history)
     
-    # Build history layout visualization string
-    history_html = "".join([
-        f'<span class="hist-badge {"low-bust" if x <= 1.2 else "high-win" if x >= 2.0 else ""}'>{x:.2f}x</span>' 
-        for x in history[-8:][::-1]
-    ])
+    # FIXED: Re-structured string token logic to completely bypass quote nesting parsing errors
+    history_html = ""
+    for x in history[-8:][::-1]:
+        badge_class = "hist-badge"
+        if x <= 1.2:
+            badge_class = "hist-badge low-bust"
+        elif x >= 2.0:
+            badge_class = "hist-badge high-win"
+            
+        history_html += f'''<span class="{badge_class}">{x:.2f}x</span>'''
 
     html_content = f"""
     <!DOCTYPE html>
@@ -266,7 +261,6 @@ def sync_wallet_endpoint(data: BalanceSyncRequest):
 
 @app.post("/ai/aviator/feed")
 def automated_multiplier_receiver(data: CrashInput):
-    # Appends new entry and drops old data past 40 indices to optimize cloud memory usage
     SYSTEM_STATE["recent_multipliers"].append(data.value)
     if len(SYSTEM_STATE["recent_multipliers"]) > 40:
         SYSTEM_STATE["recent_multipliers"].pop(0)
